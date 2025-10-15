@@ -1,0 +1,7 @@
+.thebtn {
+    padding: 10px 20px;
+    border: blue 2px solid;
+    font-size: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
