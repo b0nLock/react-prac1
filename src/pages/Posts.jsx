@@ -13,7 +13,6 @@ import { useFetching } from '../hooks/useFetching'
 import { getPageCount, getPagesArray } from '../utils/pages'
 
 import '../App.css'
-import Elements from '../Elements'
 
 const Posts = () => {
   const [posts, setPosts] = useState([])
@@ -22,21 +21,10 @@ const Posts = () => {
   const [totalPages, setTotalPages] = useState(0)
   const [limit, setLimit] = useState(10)
   const [page, setPage] = useState(1)
-  const lastElement = useRef()
 
+  const lastElement = useRef()
   const observer = useRef();
 
-  useEffect(() => {
-    const callback = (entries, observer) => {
-      
-    };
-    observer.current = new IntersectionObserver(callback);
-    observer.current.observe(lastElement)
-  }, [])
-
-  useEffect(() => {
-    fetchPosts()
-  }, [page])
 
   const createPost = (newPost) => {
     setPosts([...posts, newPost])
@@ -49,10 +37,28 @@ const Posts = () => {
 
   const [fetchPosts, isPostsLoading, postError] = useFetching(async () => {
     const response = await PostSerive.getAll(limit, page)
-    setPosts(response.data)
+    setPosts([...posts, ...response.data])
     const totalCount = response.headers['x-total-count']
     setTotalPages(getPageCount(totalCount, limit))
   })
+
+  useEffect(() => {
+    if (isPostsLoading) return;
+    if (observer.current) observer.current.disconnect;
+    var callback = function(entries, observer) {
+      if (entries[0].isIntersecting && page < totalPages) {
+        console.log(page)
+        setPage(page + 1)
+      }
+    }
+
+    observer.current = new IntersectionObserver(callback);
+    observer.current.observe(lastElement.current)
+  }, [isPostsLoading])
+
+  useEffect(() => {
+    fetchPosts()
+  }, [page])
 
   const sortedAndSearchedPosts = usePosts(posts, filter.sort, filter.query)
 
@@ -69,11 +75,12 @@ const Posts = () => {
       {postError && 
         <h1>Произошла ошибка: {postError}</h1>
       }
-      <div ref={lastElement} style={{height: '20px', backgroundColor: 'red'}}></div>
-      {isPostsLoading
-        ? <Loader />
-        : <PostList remove={removePost} posts={sortedAndSearchedPosts} />
+      <PostList remove={removePost} posts={sortedAndSearchedPosts} />
+      {isPostsLoading &&
+        <Loader />
       }
+      <div id='scrollArea' ref={lastElement} style={{ 
+        height: '20px', width: "100%"}}></div>
       <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
         {pagesArray.map((p, index) => 
           <TheButton 
